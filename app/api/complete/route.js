@@ -94,7 +94,7 @@ async function callPoyo({ model, system, user, maxTokens }) {
   const envelope = await res.json();
   if (envelope.code && envelope.code !== 200) throw new Error(`Poyo error code ${envelope.code}: ${envelope.message || ""}`);
   const text = (envelope.data?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  if (!text.trim()) throw new Error("Poyo returned no text content");
+  if (!text.trim()) throw new Error(`Poyo returned no text content (raw: ${JSON.stringify(envelope).slice(0, 400)})`);
   return text;
 }
 
