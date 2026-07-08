@@ -78,20 +78,23 @@ async function callOpenAI({ model, system, user, maxTokens }) {
 async function callPoyo({ model, system, user, maxTokens }) {
   const key = process.env.POYO_API_KEY2;
   if (!key) throw new Error("POYO_API_KEY2 not set on the server");
-  const messages = [];
-  if (system) messages.push({ role: "system", content: system });
-  messages.push({ role: "user", content: user });
+  // Poyo's /v1/messages endpoint is Claude-Messages-API-compatible: auth via
+  // x-api-key (not Bearer), system as a top-level field, and content
+  // returned as Anthropic-style blocks under data.content — not the OpenAI
+  // choices[].message.content shape /v1/chat/completions uses.
+  const body = { model, max_tokens: maxTokens || 4000, messages: [{ role: "user", content: user }] };
+  if (system) body.system = system;
 
-  const res = await fetch("https://api.poyo.ai/v1/chat/completions", {
+  const res = await fetch("https://api.poyo.ai/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model, messages, max_tokens: maxTokens || 4000 }),
+    headers: { "Content-Type": "application/json", "x-api-key": key },
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Poyo HTTP ${res.status}: ${(await res.text()).slice(0, 150)}`);
   const envelope = await res.json();
   if (envelope.code && envelope.code !== 200) throw new Error(`Poyo error code ${envelope.code}: ${envelope.message || ""}`);
-  const text = (envelope.data?.choices?.[0]?.message?.content || "").trim();
-  if (!text) throw new Error("Poyo returned no text content");
+  const text = (envelope.data?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  if (!text.trim()) throw new Error("Poyo returned no text content");
   return text;
 }
 
