@@ -76,8 +76,8 @@ async function callOpenAI({ model, system, user, maxTokens }) {
 }
 
 async function callPoyo({ model, system, user, maxTokens }) {
-  const key = process.env.POYO_API_KEY;
-  if (!key) throw new Error("POYO_API_KEY not set on the server");
+  const key = process.env.POY_API_KEY2;
+  if (!key) throw new Error("POY_API_KEY2 not set on the server");
   const messages = [];
   if (system) messages.push({ role: "system", content: system });
   messages.push({ role: "user", content: user });
